@@ -13,18 +13,21 @@ const userpersonalprofileRoutes = require("./src/routes/userpersonalprofileRoute
 const structuredresumeRoutes = require("./src/routes/structuredresumeRoutes");
 const imageRoutes = require('./src/routes/imageRoutes');
 const industryRoutes = require('./src/routes/industryRoutes');
-const jobRoutes = require('./src/routes/jobfilterRoutes');
+const jobfilterRoutes = require('./src/routes/jobfilterRoutes');
 const companyprofileRoutes = require('./src/routes/companyprofileRoutes');
 const jobpostRoutes = require('./src/routes/jobpostRoutes');
 const savedjobsRoutes = require('./src/routes/savejobsRoutes');
 const applicationRoutes = require('./src/routes/applicationRoutes');
+const analyticsRoutes = require('./src/routes/analyticsRoutes');
+const cmsRoutes = require('./src/routes/cmsRoutes');
+
 
 const app = express();
 const port = process.env.PORT || 3000;
 const allowedOrigins = [
 
-    'http://192.168.1.32:3000', 
-    'http://localhost:3000'    //  frontend dev's React app 
+    'http://192.168.1.9:3000', 
+    'http://localhost:3000'   
     
 ];
 // CORS configuration
@@ -43,14 +46,14 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // JSON parsing
 app.use(express.json());
-app.use("/public", express.static(path.join(__dirname, "public")));
+
 
 // Middleware for serving static files
-app.use('/images', express.static(path.join(__dirname, '../public/images')));
-app.use('/resume', express.static(path.join(__dirname, '../public/resume')));
+app.use('/images', express.static(path.join(__dirname, 'public/Images')));
+app.use('/resume', express.static(path.join(__dirname, 'public/resume')));
 
 // // Cookie parsing
-// app.use(cookieParser());
+// app.use(cookieParser()); 
 // Session and passport middlewares here
 app.use(session({
     secret: process.env.SESSION_SECRET,
@@ -59,10 +62,10 @@ app.use(session({
     cookie: {
         httpOnly: true,
          sameSite: 'lax',
-         secure: process.env.NODE_ENV === 'production' // Use secure cookies in production
+         secure: process.env.NODE_ENV === 'production' 
     }
 }));
-// Passport initialization
+// Passport initialization  k93hg#8fA
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -78,11 +81,13 @@ app.use('/api/companyprofile', companyprofileRoutes )
 app.use('/public', express.static('public'));
 
 app.use('/api/industries', industryRoutes);
-app.use('/api/jobs', jobRoutes);
+app.use('/api/jobs', jobfilterRoutes);
 app.use('/api/jobpost', jobpostRoutes );
 app.use('/api/saved-jobs', savedjobsRoutes);
 app.use('/api/application',applicationRoutes );
 
+app.use('/api/admin', analyticsRoutes);
+app.use('/api/cms', cmsRoutes);
 
 // Test route for browser
 app.get('/', (req, res) => {
@@ -97,16 +102,13 @@ function getLocalNetworkIp(){
         for (const net of nets[name]) {
         
             if (net.family === 'IPv4' && !net.internal) {
-                return net.address; // Return the first found IPv4 address
+                return net.address; 
             }
         }
     }
-    return 'localhost'; // Fallback if no network IP is found
+    return 'localhost'; 
 }
 
-// 
-
-// Connect DB & start server
 dbconnection()
     .then(() => {
         app.listen(port, '0.0.0.0', () => {

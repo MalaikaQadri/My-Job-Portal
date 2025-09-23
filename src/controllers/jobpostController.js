@@ -1,7 +1,6 @@
-const { Job,Sequelize } = require('../models');
+const {User, Job,Application, Sequelize } = require('../models');
 const { Op } = Sequelize;
 const { validationResult } = require('express-validator');
-
 
 // Create Job 
 const createJob = async (req, res) => {
@@ -104,14 +103,10 @@ console.log("req.user:", req.user);
     return res.status(500).json({ error: 'Server error' });
   }
 };
-// =========================
-// Job status 
-// const jobStatus = new Date(jobExpirationDate)< new Date ()? "expired"  : "active";
-
 
 
 // Get All Jobs
-const getJobs = async (req, res) => {
+const getallJobswithfulldetail = async (req, res) => {
   try {
     let {  page, limit } = req.query;
 
@@ -120,14 +115,14 @@ const getJobs = async (req, res) => {
 
     const offset = (page -1) *limit;
     const {rows:jobs, count:totalJobs } = await Job.findAndCountAll({
-      limit, offset, order:[["creatAt", "DESC"]],
+      limit, offset, order:[["createdAt", "DESC"]],
     })
 
     return res.status(200).json({
       success: true,
       totalJobs,
       currentPage:page,
-      totalPages:Math.cell(totalJobs/limit),
+      totalPages:Math.ceil(totalJobs/limit),
       jobs
     });
   } catch (err) {
@@ -136,7 +131,229 @@ const getJobs = async (req, res) => {
   }
 };
 
-// Get Single Job by ID
+
+// 1. Get jobs (list view)
+const getJobs = async (req, res) => {
+  try {
+    let { page, limit } = req.query;
+
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+
+    const offset = (page - 1) * limit;
+
+    const { rows: jobs, count: totalJobs } = await Job.findAndCountAll({
+      attributes: [
+        "id",
+        "title",
+        "location",
+        "salaryMin",
+        "salaryMax",
+        "jobExpirationDate",
+        "status",
+        "jobType",
+        "createdAt"
+      ],
+      include: [
+        {
+          model: User,
+          as: "recruiter",
+          attributes: ["companyName", "profilepic"], 
+        },
+      ],
+      limit,
+      offset,
+      order: [["createdAt", "DESC"]],
+    });
+
+    return res.status(200).json({
+      success: true,
+      totalJobs,
+      currentPage: page,
+      totalPages: Math.ceil(totalJobs / limit),
+      jobs,
+    });
+  } catch (err) {
+    console.error("Error Fetching Jobs:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Get job details (full info when card is clicked)
+const getJobDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const job = await Job.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: "recruiter",
+          attributes: [
+            "companyName",
+            "aboutUs",
+            "profilepic",
+            "bannerImage",
+            "organizationType",
+            "teamSize",
+            "industryTypes",
+            "yearOfEstablishment",
+            "companyWebsite",
+            "facebookLink",
+            "instagramLink",
+            "linkedInLink",
+            "twitterLink",
+            "location",
+            "phoneNumber",
+            "email",
+          ],
+        },
+      ],
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    const jobDetail = {
+      id: job.id,
+      title: job.title,
+      tags: job.tags,
+      education: job.education,
+      jobType: job.jobType,
+      experience: job.experience,
+      jobExpirationDate: job.jobExpirationDate,
+      salaryRange: `${job.salaryMin} - ${job.salaryMax}`,
+      description: job.description,
+      responsibilities: job.responsibilities,
+      status: job.status,
+      createdAt: job.createdAt,
+
+      // Recruiter / Company info
+      company: {
+        companyName: job.recruiter?.companyName,
+        aboutUs: job.recruiter?.aboutUs,
+        profilepic: job.recruiter?.profilepic
+          ? `${baseUrl}/images/${job.recruiter.profilepic}`
+          : null,
+        bannerImage: job.recruiter?.bannerImage
+          ? `${baseUrl}/images/${job.recruiter.bannerImage}`
+          : null,
+        organizationType: job.recruiter?.organizationType,
+        teamSize: job.recruiter?.teamSize,
+        industryTypes: job.recruiter?.industryTypes,
+        yearOfEstablishment: job.recruiter?.yearOfEstablishment,
+        companyWebsite: job.recruiter?.companyWebsite,
+        facebookLink: job.recruiter?.facebookLink,
+        instagramLink: job.recruiter?.instagramLink,
+        linkedInLink: job.recruiter?.linkedInLink,
+        twitterLink: job.recruiter?.twitterLink,
+        location: job.recruiter?.location,
+        phoneNumber: job.recruiter?.phoneNumber,
+        email: job.recruiter?.email,
+      },
+    };
+
+    return res.status(200).json({
+      success: true,
+      job: jobDetail,
+    });
+  } catch (err) {
+    console.error("Error Fetching Job Details:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+const getRecruiterJobs = async (req, res) => {
+  try {
+    const recruiterId = req.user?.id;
+    const role = req.user?.role;
+
+    if (!recruiterId || role !== "recruiter") {
+      return res.status(401).json({ error: "Unauthorized: Only recruiters can view this" });
+    }
+
+    const jobs = await Job.findAll({
+      where: { postedBy: recruiterId },
+      attributes: ["id", "title", "jobExpirationDate", "jobType", "status", "createdAt"],
+      include: [
+        {
+          model: Application,
+          as: "applications",
+          attributes: ["id"], 
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const jobCards = jobs.map((job) => ({
+      id: job.id,
+      title: job.title,
+      jobExpirationDate: job.jobExpirationDate,
+      jobType: job.jobType,
+      status: job.status,
+      applicationsCount: job.applications?.length || 0,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      jobs: jobCards,
+    });
+  } catch (err) {
+    console.error("Error fetching recruiter jobs:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+// View applications for a specific job
+const getJobApplications = async (req, res) => {
+  try {
+    const recruiterId = req.user?.id;
+    const { jobId } = req.params;
+
+    if (!recruiterId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // Ensure the job belongs to this recruiter
+    const job = await Job.findOne({
+      where: { id: jobId, postedBy: recruiterId },
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: "Job not found or not authorized" });
+    }
+
+    // Fetch applications with applicant info
+    const applications = await Application.findAll({
+      where: { jobId },
+      include: [
+        {
+          model: User,
+          as: "applicant", // make sure Application model has this association
+          attributes: ["id", "fullName", "email", "profilepic", "resume"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    return res.status(200).json({
+      success: true,
+      jobId,
+      applications,
+    });
+  } catch (err) {
+    console.error("Error fetching job applications:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+
+// Get Single Job by ID 
 const getJobById = async (req, res) => {
   try {
     const job = await Job.findByPk(req.params.id);
@@ -189,7 +406,7 @@ const expireJobs = async (req, res) => {
       { where: { jobExpirationDate: { [Op.lt]: new Date() }, status: "active" } }
     );
 
-    return res.json({ message: "Expired jobs updated", count: updatedCount });
+    return res.json({ message: "Job has Expired", count: updatedCount });
   } catch (error) {
     console.error("expireJobs error:", error);
     return res.status(500).json({ error: "Server error" });
@@ -197,5 +414,5 @@ const expireJobs = async (req, res) => {
 };
 
 
-module.exports = {createJob, deleteJob, getJobById, updateJob, getJobs, expireJobs }
+module.exports = {createJob, deleteJob, getJobById, updateJob, getJobs, expireJobs, getJobDetails , getRecruiterJobs}
 

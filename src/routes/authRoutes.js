@@ -13,9 +13,6 @@ router.post('/login', loginUser);
 
 router.get('/profile',  getUserProfile);
 
-// router.post('/logout', authorize, logoutUser);
-
-// -----------
 router.post('/otp', otpHandler);
 router.post('/reset-password', resetPassword);
 
@@ -27,8 +24,7 @@ router.post('/reset-password', resetPassword);
 // router.post('/email-verification/send-otp', sendOtp);
 // router.post('/email-verification/verify-email', verifyEmailOtp);
 // router.post('/email-verification/resend-otp', resendOtp);
-// // 2fA routes
-
+// // 2fA routes 
 // Enable 2FA
 router.post("/2fa/enable", authorize,  enable2FA);
 // Verify 2FA

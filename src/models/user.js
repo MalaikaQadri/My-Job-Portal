@@ -37,7 +37,23 @@ User.hasMany(models.Application,{
   as: 'applications',
   onDelete: 'CASCADE'
 });
-     
+
+User.hasMany(models.Chat,{
+  foreignKey:"user1Id",as:"user1Chats"
+});
+
+User.hasMany(models.Chat,{
+foreignKey:"user2Id",as:"user2Chats"
+});
+
+User.hasMany(models.Message,{
+  foreignKey:"senderId",as:"sentMessages"
+});
+
+User.hasMany(models.Message,{
+  foreignKey:"receiverId",as:"receivedMessages"
+});
+
     }
   }
   User.init({

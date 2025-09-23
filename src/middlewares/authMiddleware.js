@@ -5,20 +5,24 @@ const { User } = require("../models")
 
 // --------Authorize Middleware----------
 const authorize = async (req, res, next) => {
+  console.log(req.user);
   try {
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) return res.status(401).json({ error: "Token missing" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = { id: decoded.id }
+    // req.user = { id: decoded.id }
 
     const user = await User.findByPk(decoded.id);
     if (!user) return res.status(401).json({ error: "Invalid token user" });
 
-    req.user = user; //  store user in request
+    req.user = {
+      ...user.toJSON(),id:user.id,
+    }; 
     next();
   } catch (err) {
+    console.log("Auth Error:", err)
     return res.status(401).json({ error: "Unauthorized" });
   }
 };

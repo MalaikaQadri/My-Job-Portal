@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull:false,
       unique: true,
        references: {
-        model: 'Users', // matches your User table name
+        model: 'Users', 
         key: 'id'
       }
     },
@@ -71,6 +71,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: false
     },
+    skills:{
+      type: DataTypes.TEXT,
+      allowNull:false,
+      defaultValue:'N/A'
+    },
+
+
   }, {
     sequelize,
     modelName: 'StructuredResume',

@@ -2,60 +2,115 @@ const bcrypt = require('bcryptjs');
 const { User  } = require('../models');
 const speakeasy = require("speakeasy")
 const generateToken = require('../utils/generateToken');
-const { createEmailVerificationOtp } = require('./emailverificationController');
+const { otpHandler } = require('../controllers/otpController');
 
-// Register new user
-// POST /api/auth/register
+// const registerUser = async (req, res) => {
+//     const { fullName, username, email, password, role } = req.body;
+
+//     try {
+//       if (!fullName || !username || !email || !password) {
+//       return res.status(400).json({ message: "All fields are required." });
+//     }
+//     // Check if user already exists
+//     const existingUser = await User.findOne({ where: { email } });
+//     if (existingUser) {
+//         return res.status(400).json({ message: 'User already exists with this email.' });
+//     }
+
+//     // Create user
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const user = await User.create({
+//     fullName,
+//     username,
+//     email,
+//     password: hashedPassword,
+//     role,
+//     });
+
+//     await createEmailVerificationOtp(user);
+
+//     const token = generateToken(user.toJSON());
+
+//     res.cookie('token', token, {
+//   httpOnly: true,
+//   secure: process.env.NODE_ENV === 'production',
+//   sameSite: 'lax',
+//   maxAge: 7 * 24 * 60 * 60 * 1000, 
+// });
+
+//     res.status(201).json({
+//     id: user.id,
+//     fullName: user.fullName,
+//     username: user.username,
+//     email: user.email,
+//     role: user.role,
+//     token,
+//     });
+//     } 
+//     catch (error) {
+//     console.error('Register Error:', error);
+//     res.status(500).json({ message: 'Server error during registration.' });
+//     }
+// };
+
+
+
+
 const registerUser = async (req, res) => {
-    const { fullName, username, email, password, role } = req.body;
+  const { fullName, username, email, password, role } = req.body;
 
-    try {
-      if (!fullName || !username || !email || !password) {
+  try {
+    if (!fullName || !username || !email || !password) {
       return res.status(400).json({ message: "All fields are required." });
     }
+
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-        return res.status(400).json({ message: 'User already exists with this email.' });
+      return res.status(400).json({ message: 'User already exists with this email.' });
     }
 
     // Create user
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
-    fullName,
-    username,
-    email,
-    password: hashedPassword,
-    role,
+      fullName,
+      username,
+      email,
+      password: hashedPassword,
+      role,
     });
 
-    await createEmailVerificationOtp(user);
+    // Send OTP using unified handler
+    await otpHandler(
+      { body: { email: user.email, type: 'email_verification' } },
+      { status: () => ({ json: () => {} }) } // dummy res
+    );
 
+    // Generate JWT token
     const token = generateToken(user.toJSON());
 
-    res.cookie('token', token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000, 
-});
-
     res.status(201).json({
-    id: user.id,
-    fullName: user.fullName,
-    username: user.username,
-    email: user.email,
-    role: user.role,
-    token,
+      id: user.id,
+      fullName: user.fullName,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      token,
+      message: 'User registered. OTP sent to email for verification.',
     });
-    } 
-    catch (error) {
+
+  } catch (error) {
     console.error('Register Error:', error);
     res.status(500).json({ message: 'Server error during registration.' });
-    }
+  }
 };
 
-//  loginUser
+
+
+
+
+
+
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -111,16 +166,7 @@ const loginUser = async (req, res) => {
     res.status(500).json({ message: 'Server error during login.' });
     }
 };
-// Logout user
-// const logoutUser = (req, res) => {
 
-//   // res.clearCookie('token', {
-//   //   httpOnly: true,
-//   //   secure: process.env.NODE_ENV === 'production',
-//   //   sameSite: 'lax'
-//   // });
-//   res.status(200).json({ message: 'Logged out successfully' });
-// };
 
 // getuserprofile
 const getUserProfile = async (req, res) => {

@@ -76,6 +76,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
+    views:{
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
     description: {
       type: DataTypes.TEXT,
       allowNull: false

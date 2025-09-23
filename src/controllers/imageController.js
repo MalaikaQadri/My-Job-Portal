@@ -17,7 +17,8 @@ const uploadProfilePic = async (req, res) => {
     });
        console.log(image)
         await User.update(
-          { profilepic: req.file ? req.file.filename : null },
+          // { profilepic: req.file ? req.file.filename : null },
+            { profilepic:req.file.filename },
       { where: { id: req.user.id } }
     );
 
@@ -27,11 +28,6 @@ const uploadProfilePic = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-
-
-
-
 
 // -----Upload banner image
 const uploadBannerImage = async (req, res) => {

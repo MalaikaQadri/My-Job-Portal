@@ -1,6 +1,5 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-// const LinkedInStrategy = require("passport-linkedin-oauth2").Strategy;
 const { User, OAuthAccount } = require("../models");
 passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -10,12 +9,7 @@ passport.deserializeUser(async (id, done) => {
     done(null, user);
 });
 
-
-
-
-
-
-// GOOGLE
+// GOOGLE 
 passport.use(
     new GoogleStrategy(
         {
