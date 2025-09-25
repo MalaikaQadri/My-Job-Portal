@@ -6,7 +6,6 @@ const {getUserProfile, updateUserProfile, updateAdminProfile, getAdminProfile} =
 const { authorize } = require("../middlewares/authMiddleware");
 
 
-
 router.get('/', authorize,  getUserProfile);
 router.get('/:id', authorize,  getUserProfile);
 router.put('/', authorize, updateUserProfile);

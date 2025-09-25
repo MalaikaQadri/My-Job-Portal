@@ -1,16 +1,16 @@
 const { User, Job, Application, sequelize } = require("../models");
 const { Op } = require("sequelize");
 
-const getAnalytics = async (req, res) => {
+const getAdminAnalytics = async (req, res) => {
   try {
-    const { from, to, granularity = "day" } = req.query;
+    const { from, to } = req.query;
 
     const dateFilter = {};
     if (from && to) {
       dateFilter[Op.between] = [new Date(from), new Date(to)];
     }
 
-    // Run queries in parallel is analytics
+    // Parallel queries
     const [totalUsers, totalJobs, totalApplications, jobSeries, applicationSeries, userSeries] =
       await Promise.all([
         User.count(),
@@ -18,35 +18,45 @@ const getAnalytics = async (req, res) => {
         Application.count(),
         Job.findAll({
           attributes: [
-            [sequelize.fn("date_trunc", granularity, sequelize.col("createdAt")), "date"],
+            [sequelize.fn("to_char", sequelize.col("createdAt"), "Mon"), "month"],
             [sequelize.fn("COUNT", sequelize.col("id")), "count"]
           ],
           where: from && to ? { createdAt: dateFilter } : {},
-          group: ["date"],
-          order: [[sequelize.literal("date"), "ASC"]],
+          group: ["month"],
+          order: [[sequelize.fn("MIN", sequelize.col("createdAt")), "ASC"]],
           raw: true
         }),
         Application.findAll({
           attributes: [
-            [sequelize.fn("date_trunc", granularity, sequelize.col("createdAt")), "date"],
+            [sequelize.fn("to_char", sequelize.col("createdAt"), "Mon"), "month"],
             [sequelize.fn("COUNT", sequelize.col("id")), "count"]
           ],
           where: from && to ? { createdAt: dateFilter } : {},
-          group: ["date"],
-          order: [[sequelize.literal("date"), "ASC"]],
+          group: ["month"],
+          order: [[sequelize.fn("MIN", sequelize.col("createdAt")), "ASC"]],
           raw: true
         }),
         User.findAll({
           attributes: [
-            [sequelize.fn("date_trunc", granularity, sequelize.col("createdAt")), "date"],
+            [sequelize.fn("to_char", sequelize.col("createdAt"), "Mon"), "month"],
             [sequelize.fn("COUNT", sequelize.col("id")), "count"]
           ],
           where: from && to ? { createdAt: dateFilter } : {},
-          group: ["date"],
-          order: [[sequelize.literal("date"), "ASC"]],
+          group: ["month"],
+          order: [[sequelize.fn("MIN", sequelize.col("createdAt")), "ASC"]],
           raw: true
         }),
       ]);
+
+    // Month labels (Jan–Dec)
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+    // Helper to map DB result to full 12 months
+    const formatSeries = (series) => {
+      const map = {};
+      series.forEach(s => { map[s.month] = Number(s.count); });
+      return months.map(m => map[m] || 0);
+    };
 
     return res.status(200).json({
       totals: {
@@ -55,9 +65,10 @@ const getAnalytics = async (req, res) => {
         applications: totalApplications,
       },
       series: {
-        jobs: jobSeries,
-        applications: applicationSeries,
-        users: userSeries,
+        months,
+        jobs: formatSeries(jobSeries),
+        applications: formatSeries(applicationSeries),
+        users: formatSeries(userSeries),
       },
     });
   } catch (error) {
@@ -66,4 +77,4 @@ const getAnalytics = async (req, res) => {
   }
 };
 
-module.exports= { getAnalytics }
+module.exports = { getAdminAnalytics };

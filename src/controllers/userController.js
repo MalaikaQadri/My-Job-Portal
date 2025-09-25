@@ -1,3 +1,4 @@
+const {Op} = require('sequelize');
 const { where } = require('sequelize');
 const bcrypt = require('bcrypt')
 const { User } = require('../models');
@@ -26,6 +27,117 @@ const createUser = async (req, res) => {
         
     }
 };
+
+const getApplicantProfileById = async (req, res) => {
+  try {
+    // Ensure requester is authenticated
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
+    }
+
+    // Only recruiters can access applicant profiles (as requested).
+    if (req.user.role !== "recruiter") {
+      return res.status(403).json({ success: false, message: "Access denied. Recruiter role required." });
+    }
+
+    const applicantId = req.params.id;
+    if (!applicantId) {
+      return res.status(400).json({ success: false, message: "Applicant id is required in params." });
+    }
+
+    // Fetch the applicant by primary key.
+    const user = await User.findByPk(applicantId, {
+      attributes: [
+        "id",
+        "fullName",
+        "username",
+        "email",
+        "title",
+        "experience",
+        "education",
+        "personalwebsite",
+        "profilepic",
+        "resume",
+        "location",
+        "phoneNumber",
+        "bioGraphy",
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Applicant not found." });
+    }
+
+    // Make sure the target user is actually an applicant
+    if (user.role && user.role !== "applicant") {
+      return res.status(400).json({ success: false, message: "The requested user is not an applicant." });
+    }
+
+    // Build base URL for files
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    // Respond with same shape as getUserProfile (so UI shows identical view)
+    return res.status(200).json({
+      success: true,
+      applicant: {
+        id: user.id,
+        fullName: user.fullName,
+        username: user.username,
+        email: user.email,
+        title: user.title,
+        experience: user.experience,
+        education: user.education,
+        personalwebsite: user.personalwebsite,
+        profilepic: user.profilepic ? `${baseUrl}/images/${user.profilepic}` : null,
+        resume: user.resume ? `${baseUrl}/resume/${user.resume}` : null,
+        location: user.location,
+        phoneNumber: user.phoneNumber,
+        bioGraphy: user.bioGraphy,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching applicant profile by id:", err);
+    return res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+};
+
+
+
+// All applicants  
+const getAllApplicants = async (req, res) => {
+  try {
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    const applicants = await User.findAll({
+      where: { role: "applicant" },
+      attributes: ["id", "fullName", "title", "profilepic"]
+    });
+
+    const formattedApplicants = applicants.map(applicant => ({
+      id: applicant.id,
+      name: applicant.fullName,
+      title: applicant.title,
+      profilepic: applicant.profilepic
+        ? `${baseUrl}/images/${applicant.profilepic}`
+        : null
+    }));
+
+    return res.status(200).json({
+      success: true,
+      applicants: formattedApplicants
+    });
+  } catch (error) {
+    console.error("Error fetching applicants:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching applicants."
+    });
+  }
+};
+
+
+ 
+
 
 //Read ( Get All Users )
 const getUser = async (req,res) =>{
@@ -197,6 +309,48 @@ catch(error){
 //   }
 // };
 
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user?.id; // user authenticated from middleware
+    const { oldPassword, newPassword } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized. User not found." });
+    }
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: "Old and new passwords are required." });
+    }
+
+    // Find user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Check old password
+    const isMatch = await bcrypt.compare(oldPassword, user.password || "");
+    if (!isMatch) {
+      return res.status(400).json({ error: "Old password is incorrect." });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({ message: "Password changed successfully." });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+
+
+
 // =========
 const getUserAccount = async (req, res) => {
   try {
@@ -212,14 +366,26 @@ const getUserAccount = async (req, res) => {
 
 
 
-// Get users (name, email, phone)
+// Manage Users on Admin side 
 const getallManageUsers = async (req, res) => {
   try {
     console.log("Inside Get All manage Users");
+    const {role: roleParam} = req.query;
+    console.log("Query role param:", roleParam);
+
+    let whereClause = {};
+    if(roleParam){
+      whereClause.role = {[Op.eq]:roleParam};
+    }
+    console.log("Where Clause:", whereClause);
+
     const users = await User.findAll({
-      attributes: ["id","fullName", "email", "phoneNumber"],
-      paranoid:false
+      attributes: ["id","fullName", "email", "phoneNumber", "role"],
+      where:whereClause,
+      paranoid:false,
     });
+
+    console.log("Users Found", users.length);
     res.status(200).json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -235,12 +401,12 @@ const manageUserStatus = async (req, res) => {
     let message = "";
 
     switch (type) {
-      case "activate":
+      case "active":
         await User.update({ status: "active" }, { where: { id } });
         message = "User activated successfully";
         break;
 
-      case "deactivate":
+      case "inactive":
         await User.update({ status: "inactive" }, { where: { id } });
         message = "User deactivated successfully";
         break;
@@ -276,6 +442,6 @@ const manageUserStatus = async (req, res) => {
   }
 };
 
-module.exports = { createUser, getUser, getUserById, updateUser, getallManageUsers, manageUserStatus, getUserAccount  }
+module.exports = { createUser,changePassword, getUser, getUserById, updateUser, getallManageUsers, manageUserStatus, getUserAccount, getAllApplicants, getApplicantProfileById  }
 
 

@@ -131,8 +131,8 @@ const getallJobswithfulldetail = async (req, res) => {
   }
 };
 
-
-// 1. Get jobs (list view)
+// JAB YA sab get all job ka code hay is may mujhy profile pic ka url bhio chahiya taa k vo get hoo k show ho front end par .or may tumhay aik reference vala bhi send karon gi k kaysay baki API'S may lagaya hy uss k hisab say lagana 
+//  Get jobs (list view)
 const getJobs = async (req, res) => {
   try {
     let { page, limit } = req.query;
@@ -178,6 +178,55 @@ const getJobs = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+
+const getTTTTJobs = async (req, res) => {
+  try {
+    let { page, limit } = req.query;
+
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+
+    const offset = (page - 1) * limit;
+
+    const { rows: jobs, count: totalJobs } = await Job.findAndCountAll({
+      attributes: [
+        "id",
+        "title",
+        "location",
+        "salaryMin",
+        "salaryMax",
+        "jobExpirationDate",
+        "status",
+        "jobType",
+        "createdAt"
+      ],
+      include: [
+        {
+          model: User,
+          as: "recruiter",
+          attributes: ["companyName", "profilepic"], 
+        },
+      ],
+      limit,
+      offset,
+      order: [["createdAt", "DESC"]],
+    });
+
+    return res.status(200).json({
+      success: true,
+      totalJobs,
+      currentPage: page,
+      totalPages: Math.ceil(totalJobs / limit),
+      jobs,
+    });
+  } catch (err) {
+    console.error("Error Fetching Jobs:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+
 
 // Get job details (full info when card is clicked)
 const getJobDetails = async (req, res) => {
@@ -252,7 +301,7 @@ const getJobDetails = async (req, res) => {
         twitterLink: job.recruiter?.twitterLink,
         location: job.recruiter?.location,
         phoneNumber: job.recruiter?.phoneNumber,
-        email: job.recruiter?.email,
+        email: job.recruiter?.email,  
       },
     };
 
@@ -353,7 +402,7 @@ const getJobApplications = async (req, res) => {
 
 
 
-// Get Single Job by ID 
+// Get Single Job by ID  
 const getJobById = async (req, res) => {
   try {
     const job = await Job.findByPk(req.params.id);
@@ -384,6 +433,8 @@ const updateJob = async (req, res) => {
   }
 };
 
+// ai model may resume k keywords store store karwany hain database may then uss ki base par   job k sath resume ka match score show karwaey ga . resume k keywords store karwany k liya seperate model nanny ga ?? or hum score match bhi databse may store karwaen gay ?? or same model may ??? 
+
 // Delete Job
 const deleteJob = async (req, res) => {
   try {
@@ -413,6 +464,21 @@ const expireJobs = async (req, res) => {
   }
 };
 
+const getjobsonAdminside = async ( req, res ) =>{
+  try {
+    
+  } catch (err) {
+    console.error("getjobsonAdminside:", err);
+    return res.status(500).json({ err: "Server error" });
+  }
+}
 
-module.exports = {createJob, deleteJob, getJobById, updateJob, getJobs, expireJobs, getJobDetails , getRecruiterJobs}
+// admin ki side may bhi jobs show karwani hain uss k ui may  title, job type , expiration date dikhani hy then then jab vo uss ki details k liya click karta hy tu ussi job ki details show hooti hain ab may nay 2 tarhan ki api banai hoi hain appliucnt side par jis may jis may aik may just cards may jo data show karwana hy job posts ka vo hy uss may jitni bhi jobs hain uss ka data show hota hy or aik banai hy k jab vo view detaile par click karta hy tu uss job ki baki ki detail show hoti hy 
+
+
+// // admin
+// title, job type , expiration date { acce[pted , rejected, reported ] }
+
+
+module.exports = { createJob, deleteJob, getJobById, updateJob, getJobs, expireJobs, getJobDetails , getRecruiterJobs, getjobsonAdminside }
 

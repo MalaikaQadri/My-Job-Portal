@@ -182,6 +182,8 @@ const updateApplicationStatus = async (req, res) => {
 //   }
 // };
 
+// mujhy Ai model ko backend k sath joorna hy AI dev ki batai hoi dependencies aik seperate folder bana k chalaya hy chal gya hy . senario yun hy k 
+
 //  Get my  appplications ( applicant only  )
 const getMyApplications = async (req, res) => {
   try {

@@ -145,7 +145,7 @@ const updateAdminProfile = async (req, res) => {
 
     const allowedFields = [
       "fullName",
-      "email",
+      // "email",
       "phoneNumber",
       // "profilepic",
     ];
@@ -164,7 +164,7 @@ const updateAdminProfile = async (req, res) => {
       message: "Admin Profile updated successfully",
       user: {
         fullName: user.fullName,
-        email: user.email,
+        // email: user.email,
         // profilepic: user.profilepic
         //   ? `${baseUrl}/images/${user.profilepic}`
         //   : null,

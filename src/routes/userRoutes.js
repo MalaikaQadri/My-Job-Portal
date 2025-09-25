@@ -1,6 +1,6 @@
 const express = require ('express');
 const router = express.Router();
-const { createUser, getUser,getUserById, updateUser, manageUserStatus,getallManageUsers, getUserAccount} = require('../controllers/userController');
+const { createUser, getUser,getUserById, updateUser, manageUserStatus,getallManageUsers, getApplicantProfileById, getUserAccount, changePassword, getAllApplicants} = require('../controllers/userController');
 const {  isAdmin, isSelfOrAdmin, authorize } = require('../middlewares/authMiddleware');
 const {searchCandidatesByTitle} = require("../controllers/applicantFilterController");
 
@@ -10,16 +10,20 @@ const {searchCandidatesByTitle} = require("../controllers/applicantFilterControl
 router.post('/register', createUser);
 // READ - Get all users [ Admins only ]  protect, isAdmin
 router.get('/', getUser);
+router.get ('/allApplicants', getAllApplicants);
+router.get('/applicants/:id',authorize,  getApplicantProfileById);
 
 
 //
 
+router.post('/change-password', authorize, changePassword );
 
 
 
 router.get('/allmanageUsers',  getallManageUsers);
 router.put('/manageUsersStatus/:id', manageUserStatus );
 router.get('/userAccounts', getUserAccount);
+
 
 router.get("/applicants/search", searchCandidatesByTitle);
 

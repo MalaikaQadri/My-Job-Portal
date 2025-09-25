@@ -20,6 +20,7 @@ const savedjobsRoutes = require('./src/routes/savejobsRoutes');
 const applicationRoutes = require('./src/routes/applicationRoutes');
 const analyticsRoutes = require('./src/routes/analyticsRoutes');
 const cmsRoutes = require('./src/routes/cmsRoutes');
+const locationRoutes = require('./src/routes/locationRoutes');
 
 
 const app = express();
@@ -81,6 +82,7 @@ app.use('/api/companyprofile', companyprofileRoutes )
 app.use('/public', express.static('public'));
 
 app.use('/api/industries', industryRoutes);
+app.use('/api/locations', locationRoutes );
 app.use('/api/jobs', jobfilterRoutes);
 app.use('/api/jobpost', jobpostRoutes );
 app.use('/api/saved-jobs', savedjobsRoutes);
