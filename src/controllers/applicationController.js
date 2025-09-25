@@ -209,6 +209,57 @@ const getMyApplications = async (req, res) => {
 
 
 
+// const getJobApplicationsForRecruiter = async (req, res) => {
+//   try {
+//     const recruiterId = req.user?.id;
+//     const role = req.user?.role;
+//     const { jobId } = req.params;
+
+//     if (!recruiterId || role !== "recruiter") {
+//       return res.status(401).json({ error: "Unauthorized: Only recruiters can view applications" });
+//     }
+
+//     if (!jobId) {
+//       return res.status(400).json({ error: "Job ID is required" });
+//     }
+
+//     // Fetch applications with applicant details jab 
+//     const applications = await Application.findAll({
+//       where: { jobId },
+//       include: [
+//         {
+//           model: User,
+//           as: "applicant", 
+//           attributes: ["id", "fullName", "profilepic", "title", "experience", "education"],
+//         },
+//       ],
+//       order: [["createdAt", "DESC"]],
+//     });
+
+//     const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+//     const applicantCards = applications.map((app) => ({
+//       id: app.applicant.id,
+//       fullName: app.applicant.fullName,
+//       title: app.applicant.title,
+//       experience: app.applicant.experience,
+//       education: app.applicant.education,
+//       profilepic: app.applicant.profilepic
+//         ? `${baseUrl}/images/${app.applicant.profilepic}`
+//         : null,
+//     }));
+
+//     return res.status(200).json({
+//       success: true,
+//       jobId,
+//       applicants: applicantCards,
+//     });
+//   } catch (err) {
+//     console.error("Error fetching job applications for recruiter:", err);
+//     return res.status(500).json({ error: "Server error" });
+//   }
+// };
+
 const getJobApplicationsForRecruiter = async (req, res) => {
   try {
     const recruiterId = req.user?.id;
@@ -223,13 +274,13 @@ const getJobApplicationsForRecruiter = async (req, res) => {
       return res.status(400).json({ error: "Job ID is required" });
     }
 
-    // Fetch applications with applicant details jab 
+    // Fetch applications with applicant details
     const applications = await Application.findAll({
       where: { jobId },
       include: [
         {
           model: User,
-          as: "applicant", 
+          as: "applicant",
           attributes: ["id", "fullName", "profilepic", "title", "experience", "education"],
         },
       ],
@@ -238,8 +289,10 @@ const getJobApplicationsForRecruiter = async (req, res) => {
 
     const baseUrl = `${req.protocol}://${req.get("host")}`;
 
-    const applicantCards = applications.map((app) => ({
-      id: app.applicant.id,
+    // Map applicant cards
+    const mapped = applications.map((app) => ({
+      id: app.id,
+      status: app.status,
       fullName: app.applicant.fullName,
       title: app.applicant.title,
       experience: app.applicant.experience,
@@ -252,13 +305,41 @@ const getJobApplicationsForRecruiter = async (req, res) => {
     return res.status(200).json({
       success: true,
       jobId,
-      applicants: applicantCards,
+      all: mapped, // ✅ sabhi
+      shortlisted: mapped.filter((a) => a.status === "shortlisted"), // ✅ shortlist wali list
+      selected: mapped.filter((a) => a.status === "selected"), // ✅ selected wali list
     });
   } catch (err) {
     console.error("Error fetching job applications for recruiter:", err);
     return res.status(500).json({ error: "Server error" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ui may jab recruiter my jobs ka page open kary ga tu uss ko jobs nazar aen gi , phir vo aik specific job ki applications open kary ga tu uss k pass cards showw hon gay jis may applicants ki thuri detail show hoo rahi hoo gi like image or name or title, jis ka controlleer getJobApplicationsForRecruiter hy jis ka code tumahy neechy send kar dia hy ab may ya chahti hoon jab recruiyter specific applicant ki application open karna chahy tu uss k pass just ussi ka cover letterr or baki ki detail show hoo magar controller may masla hy vo sari complete applications shooww kar raha hy halan k mujhy just specific ki chahiya uss ka controoler getJobApplications hy may nay dono controllers ka code send kar dia hy or user model or job model or application model ka bhi send kar rahi hoon mujhy ussy theek kar k doo 
 
